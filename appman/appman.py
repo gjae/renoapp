@@ -25,9 +25,6 @@ def run_migrations(payload, rollback: bool = False):
 def restart_server(payload, rollback: bool = False):
     pass
 
-def check_reno_dependencies(payload, rollback: bool = False):
-    pass
-
 def generate_app(payload, rollback: bool = False):
     """
     Downloads and extracts a RenoApp module into the designated apps directory,
@@ -72,7 +69,6 @@ def run_post_install_tasks(payload, rollback: bool = False):
 
 class Appman:
     pipeline = [
-        check_reno_dependencies,
         generate_app,
         update_settings,
         install_requirements,

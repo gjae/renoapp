@@ -53,14 +53,13 @@ Each app is responsible for generating its own frontend assets (e.g., React comp
 RenoApp includes a robust, transaction-like orchestrator called `Appman` (App Manager). It is designed to safely execute the installation lifecycle of each micro-app.
 
 The installation pipeline follows a strict sequence:
-1. `check_reno_dependencies`: Validates the DAG of dependencies to ensure a safe installation order.
-2. `generate_app`: Downloads or clones the app.
-3. `update_settings`: Updates internal settings and the frontend app registry.
-4. `install_requirements`: Installs isolated Python packages.
-5. `copy_front`: Extracts and copies frontend React components.
-6. `run_migrations`: Applies database migrations.
-7. `run_post_install_tasks`: Executes custom shell scripts or initialization commands defined by the app in its `post_install_tasks` array.
-8. `restart_server`: Reloads the environment to reflect the new app.
+1. `generate_app`: Downloads or clones the app securely using memory-safe chunked streams.
+2. `update_settings`: Updates internal settings and the frontend app registry.
+3. `install_requirements`: Installs isolated Python packages using the high-performance `uv pip` strategy.
+4. `copy_front`: Extracts and copies frontend React components.
+5. `run_migrations`: Applies database migrations.
+6. `run_post_install_tasks`: Executes custom shell scripts or initialization commands defined by the app in its `post_install_tasks` array.
+7. `restart_server`: Reloads the environment to reflect the new app.
 
 **Rollback Mechanism:** `Appman` implements a Command Pattern with an automated LIFO (Last-In, First-Out) stack. If any step fails, it triggers a `rollback()` method that iterates through the stack in reverse, cleanly undoing the executed tasks (e.g., reverting migrations, deleting copied files) to ensure the system's integrity remains uncompromised.
 
