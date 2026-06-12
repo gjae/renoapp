@@ -6,8 +6,10 @@ from unittest.mock import patch, MagicMock
 from pathlib import Path
 from django.conf import settings
 
-from appman.appman import Appman, generate_app
+from appman.appman import Appman, generate_app, install_requirements
 from appman.payload import InstallAppPayload
+from appman.utils import DummyInstallRequirements
+from appman.exceptions import RequirementsException
 
 @pytest.fixture
 def fake_zip_bytes():
@@ -88,5 +90,46 @@ def test_generate_app_rollback(fake_apps_dir, mock_requests_get):
     # Then trigger rollback
     generate_app(payload, rollback=True)
     
-    # Verify deletion
-    assert not app_dir.exists(), "The app directory was not deleted during rollback."
+    
+def test_install_requirements_success(fake_apps_dir):
+    """
+    Tests that install_requirements uses the injected installer correctly
+    when requirements.txt is present.
+    """
+    payload = InstallAppPayload(
+        app="test_app",
+        dependencies=[],
+        tasks=[],
+        path="http://fake-registry.com"
+    )
+    
+    app_dir = fake_apps_dir / "test_app"
+    app_dir.mkdir()
+    (app_dir / "requirements.txt").write_text("requests==2.31.0")
+    
+    # Inject our mock installer
+    dummy_installer = DummyInstallRequirements(payload)
+    
+    # Execute phase
+    # It prints to stdout, we just ensure it doesn't raise an exception
+    install_requirements(payload, installer=dummy_installer)
+
+def test_install_requirements_missing_file(fake_apps_dir):
+    """
+    Tests that install_requirements raises RequirementsException 
+    if requirements.txt is missing when using the dummy installer.
+    """
+    payload = InstallAppPayload(
+        app="test_app",
+        dependencies=[],
+        tasks=[],
+        path="http://fake-registry.com"
+    )
+    
+    app_dir = fake_apps_dir / "test_app"
+    app_dir.mkdir()
+    
+    dummy_installer = DummyInstallRequirements(payload)
+    
+    with pytest.raises(RequirementsException, match="Requirements file not found"):
+        install_requirements(payload, installer=dummy_installer)

@@ -5,12 +5,19 @@ import requests
 import tempfile
 from pathlib import Path
 from django.conf import settings
+from .utils import BaseInstaller, InstallRequirements
 
 def copy_front(payload, rollback: bool = False):
     pass
 
-def install_requirements(payload, rollback: bool = False):
-    pass
+def install_requirements(payload, installer: BaseInstaller = None, rollback: bool = False):
+    if installer is None:
+        installer = InstallRequirements(payload)
+        
+    if rollback:
+        installer.run_rollback()
+    else:
+        installer.run_install()
 
 def run_migrations(payload, rollback: bool = False):
     pass
