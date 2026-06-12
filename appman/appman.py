@@ -19,6 +19,8 @@ def generate_app(payload, rollback: bool = False):
 def update_settings(payload, rollback: bool = False):
     pass
 
+def run_post_install_tasks(payload, rollback: bool = False):
+    pass
 
 class Appman:
     pipeline = [
@@ -28,6 +30,7 @@ class Appman:
         install_requirements,
         copy_front,
         run_migrations,
+        run_post_install_tasks,
         restart_server,
     ]
 
