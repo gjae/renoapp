@@ -35,7 +35,6 @@ class MockAppFinder(BaseAppFinder):
             path=path
         )
 
-
 class Resolver:
     def __init__(self, payload: InstallAppPayload, finder: BaseAppFinder):
         self.payload = payload

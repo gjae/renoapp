@@ -90,6 +90,19 @@ graph TD
     Resolver -->|2. Yields Appman| ExeC
 ```
 
+### Testing
+RenoApp employs a strict testing methodology using `pytest`. The architecture is designed to allow business logic and orchestration algorithms to be tested in isolation.
+
+To run the test suite locally:
+```bash
+uv run pytest -v
+```
+
+Specifically, the `Resolver` module includes comprehensive tests (using a `DictAppFinder` mock) to validate the Directed Acyclic Graph logic:
+- **Linear Graphs:** Ensures standard sequential dependencies are resolved correctly.
+- **Diamond Graphs:** Validates deduplication (e.g. if A depends on B and C, and both depend on D, D is only installed once).
+- **Circular Dependencies:** Confirms that infinite loops are detected and blocked before execution.
+
 ## License
 This project is open-source and free to use, modify, and distribute under the **MIT License**. 
 
