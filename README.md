@@ -1,15 +1,15 @@
 # RenoApp (Core Orchestrator)
 
-## Introducción
-RenoApp es un framework base construido sobre Django diseñado para actuar como un orquestador central de aplicaciones. En lugar de desarrollar funcionalidades monolíticas directamente en el núcleo, este proyecto permite que múltiples aplicaciones (micro-apps o plugins) se integren de forma dinámica y automatizada.
+## Introduction
+RenoApp is a base framework built on top of Django designed to act as a central application orchestrator. Instead of developing monolithic features directly within the core, this project allows multiple applications (micro-apps or plugins) to be integrated dynamically and automatically.
 
-## Objetivo
-El objetivo principal de RenoApp es emular una arquitectura modular similar a la de ERPs robustos (como Odoo), pero ofreciendo una **Experiencia de Desarrollo (DX) amigable y moderna**. 
+## Objective
+The main objective of RenoApp is to emulate a modular architecture similar to robust ERPs (like Odoo), but offering a **friendly and modern Developer Experience (DX)**.
 
-Cada aplicación dentro del ecosistema de RenoApp:
-- Se desarrolla como un repositorio o módulo independiente.
-- Es descubierta e instalada dinámicamente al colocarse en la carpeta `apps/`.
-- Se configura a sí misma a través de un manifiesto `__app__.json` que define sus rutas, dependencias y configuraciones.
-- Se mantiene completamente aislada y desacoplada del código base central.
+Each application within the RenoApp ecosystem:
+- Is developed as an independent repository or module.
+- Is dynamically discovered and installed when placed in the `apps/` directory.
+- Configures itself through an `__app__.json` manifest that defines its routes, dependencies, and settings.
+- Remains completely isolated and decoupled from the central codebase.
 
-Este diseño permite que los equipos de desarrollo puedan escalar funcionalidades rápidamente sin tocar el núcleo (Core), reduciendo cuellos de botella y facilitando el mantenimiento a largo plazo.
+This design allows development teams to rapidly scale features without modifying the core, reducing bottlenecks and facilitating long-term maintenance.
