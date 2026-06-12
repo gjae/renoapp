@@ -6,6 +6,7 @@
     "require_restart": false,
     "path": "apps.{{app_name}}",
     "app_path_prefix": "",
+    "frontend": "{{app_name}}",
     "depends_on": [
         "core"
     ],
