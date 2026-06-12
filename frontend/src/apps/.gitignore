@@ -1,0 +1,5 @@
+# Ignorar todos los modulos inyectados por el comando install_app
+*
+
+# Excepto este mismo archivo para mantener la carpeta viva en git
+!.gitignore
