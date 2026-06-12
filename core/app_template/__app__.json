@@ -1,0 +1,19 @@
+{
+    "name": "{{app_name}}",
+    "version": "0.1.0",
+    "description": "",
+    "require_migrate": false,
+    "require_restart": false,
+    "path": "apps.{{app_name}}",
+    "app_path_prefix": "",
+    "depends_on": [
+        "core"
+    ],
+    "paths": [
+        {
+            "url": "{{app_name}}",
+            "view": "view_example",
+            "name": "{{app_name}}.example"
+        }
+    ]
+}

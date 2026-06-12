@@ -1,0 +1,8 @@
+# Ignorar todas las aplicaciones instaladas/clonadas en esta carpeta
+*
+
+# Excepto el __init__.py para que siga siendo un paquete de Python
+!__init__.py
+
+# Excepto este mismo archivo .gitignore
+!.gitignore
