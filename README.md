@@ -64,6 +64,32 @@ The installation pipeline follows a strict sequence:
 
 **Rollback Mechanism:** `Appman` implements a Command Pattern with an automated LIFO (Last-In, First-Out) stack. If any step fails, it triggers a `rollback()` method that iterates through the stack in reverse, cleanly undoing the executed tasks (e.g., reverting migrations, deleting copied files) to ensure the system's integrity remains uncompromised.
 
+### Dependency Resolver
+To support the `depends_on` manifest properties, RenoApp features a recursive `Resolver`. Since application dependencies form a **Directed Acyclic Graph (DAG)**, the resolver uses a Post-Order Depth-First Search (DFS) or Topological Sort to determine the exact installation order.
+
+1. **Resolution:** It recursively traverses all missing dependencies, detecting and preventing circular dependencies.
+2. **Flattening:** It flattens the graph into a strictly ordered execution stack, guaranteeing that "Leaf" applications (those with no dependencies) are installed before the "Root" applications that depend on them.
+3. **Execution:** The `walk()` generator yields pre-configured `Appman` instances in the correct topological order. This architectural separation opens the door for future optimizations, such as parallelizing the download phase of the apps before executing their database migrations sequentially.
+
+```mermaid
+graph TD
+    Resolver[Dependency Resolver]
+    
+    subgraph "DAG Resolution"
+        AppB[App: Billing] -. depends_on .-> AppS[App: Sales]
+        AppS -. depends_on .-> AppC[App: Contacts]
+    end
+    
+    Resolver -->|1. Parses| AppB
+    
+    subgraph "Execution Stack (walk)"
+        direction LR
+        ExeC[1. Install Contacts] --> ExeS[2. Install Sales] --> ExeB[3. Install Billing]
+    end
+    
+    Resolver -->|2. Yields Appman| ExeC
+```
+
 ## License
 This project is open-source and free to use, modify, and distribute under the **MIT License**. 
 

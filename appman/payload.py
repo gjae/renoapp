@@ -9,6 +9,11 @@ class Task:
 
 @dataclass
 class InstallAppPayload:
+    """
+    A dataclass that contains the payload for installing an app.
+    This payload can be searched in app repository via requests 
+    or injected as mock for testing
+    """
     app: str
     dependencies: List[str]
     tasks: List[Task]

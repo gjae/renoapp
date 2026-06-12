@@ -24,7 +24,14 @@ except ImportError:
 
 
 
-APP_GRAPH = {}
+APP_GRAPH = {
+    "core": {
+        "name": "core",
+        "path": "core",
+        "dependencies": [],
+        "tasks": [],
+    }
+}
 
 def load_app_configs():
     global APP_GRAPH
