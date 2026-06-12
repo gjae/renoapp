@@ -47,7 +47,7 @@ Each app is responsible for generating its own frontend assets (e.g., React comp
 3. Provides a base template to manage the global design and layout.
 4. Compiles the final assets.
 
-This ensures each app only worries about its specific UI section, while the Core orchestrates a seamless Single Page Application (SPA) experience.
+**Production vs Development:** During development, the frontend runs dynamically alongside the backend. For production, RenoApp compiles all assets to serve a unified Single Page Application (SPA). The backend and frontend will communicate strictly via an API architecture, with planned support for real-time communication using WebSockets.
 
 ### Appman (Orchestration Pipeline)
 RenoApp includes a robust, transaction-like orchestrator called `Appman` (App Manager). It is designed to safely execute the installation lifecycle of each micro-app.
