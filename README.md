@@ -41,10 +41,11 @@ graph TD
 ```
 
 ### Frontend Integration
-Each app is responsible for generating its own frontend assets (e.g., React components). During the `install_app` pipeline, the orchestrator:
-- Copies these frontend views into an isolated execution environment.
-- Provides a base template to manage the global design and layout.
-- Compiles the final assets.
+Each app is responsible for generating its own frontend assets (e.g., React components). During the `install_app` pipeline, the orchestrator handles the integration automatically:
+1. Copies the app's frontend views into a dedicated `frontend/src/apps/` directory within the core.
+2. Dynamically rewrites a central registry file (e.g., `apps.config.js`) to inject the newly installed app. This registry contains metadata such as the app's icon, description, and base routing path.
+3. Provides a base template to manage the global design and layout.
+4. Compiles the final assets.
 
 This ensures each app only worries about its specific UI section, while the Core orchestrates a seamless Single Page Application (SPA) experience.
 
