@@ -49,6 +49,29 @@ Each app is responsible for generating its own frontend assets (e.g., React comp
 
 **Production vs Development:** During development, the frontend runs dynamically alongside the backend. For production, RenoApp compiles all assets to serve a unified Single Page Application (SPA). The backend and frontend will communicate strictly via an API architecture, with planned support for real-time communication using WebSockets.
 
+### Metadata Resolution (Fetcher Strategy)
+Before an application can be installed, its metadata (`__app__.json` or equivalent payload) must be parsed to understand its dependencies, frontend requirements, and installation scripts. RenoApp uses a **Strategy Pattern** via a `Fetcher` hierarchy to accomplish this cleanly:
+
+- `DictFetcher`: Extracts metadata from a local Python dictionary or internal API request.
+- `UrlFetcher`: Downloads the JSON metadata securely from a remote repository via HTTP requests.
+
+The `InstallAppPayload` dataclass acts as the universal language for RenoApp. It uses a fault-tolerant parsing mechanism (`from_dict`) that maps community aliases (e.g., `"depends_on"` to `"dependencies"`) and dynamically filters out unexpected keys, ensuring *forward-compatibility* with future metadata schemas.
+
+```mermaid
+graph TD
+    classDef payload fill:#2d3748,stroke:#4a5568,color:#fff;
+    classDef fetcher fill:#3182ce,stroke:#2b6cb0,color:#fff;
+    
+    SourceDict[Local Dict Payload] --> DictFetcher((DictFetcher)):::fetcher
+    SourceURL[Remote GitHub/Repo URL] --> UrlFetcher((UrlFetcher)):::fetcher
+    
+    DictFetcher --> |"Raw Data"| DataFilter{{"Data Filter (Alias Mapping & Pruning)"}}
+    UrlFetcher --> |"Raw JSON"| DataFilter
+    
+    DataFilter --> |"Clean Data"| Payload["InstallAppPayload (Dataclass)"]:::payload
+    Payload --> Resolver["DAG Resolver"]
+```
+
 ### Appman (Orchestration Pipeline)
 RenoApp includes a robust, transaction-like orchestrator called `Appman` (App Manager). It is designed to safely execute the installation lifecycle of each micro-app.
 
