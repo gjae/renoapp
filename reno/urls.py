@@ -52,6 +52,11 @@ for app in settings.APP_GRAPH.keys():
             router_prefix = path_prefix.strip('/')
             router_prefix = f"/{router_prefix}" if router_prefix else f"/{app}"
             api.add_router(router_prefix, views_module.router)
+            
+        if hasattr(views_module, "controllers"):
+            # django-ninja-extra uses register_controllers instead of add_controller
+            for controller in views_module.controllers:
+                api.register_controllers(controller)
     except ImportError:
         pass
 
