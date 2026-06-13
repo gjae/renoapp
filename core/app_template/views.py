@@ -1,6 +1,4 @@
-from ninja_extra import NinjaExtraAPI
-
-api = NinjaExtraAPI()
+from reno.router import api
 
 # Register controllers if exists inside the app 
 # only class reference

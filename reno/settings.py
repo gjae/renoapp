@@ -242,3 +242,5 @@ LOGGING = {
         },
     },
 }
+
+FRONTEND_APPS_DIR = BASE_DIR / "frontend" / "apps"

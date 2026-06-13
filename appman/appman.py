@@ -1,4 +1,5 @@
 import os
+import importlib
 import subprocess
 import zipfile
 import io
@@ -7,10 +8,45 @@ import requests
 import tempfile
 from pathlib import Path
 from django.conf import settings
+from django.core.management import call_command
 from .utils import BaseInstaller, InstallRequirements
 
+
 def copy_front(payload, rollback: bool = False):
-    pass
+    """
+    Extracts the frontend components from the installed app and copies them 
+    to the central frontend workspace (e.g., for Vite/React compilation).
+    
+    Args:
+        payload (InstallAppPayload): The manifest payload containing the app's metadata.
+        rollback (bool, optional): If True, triggers the rollback mechanism to delete the copied files.
+    """
+    base_dir = getattr(settings, 'BASE_DIR', Path(__file__).resolve().parent.parent)
+    apps_dir = Path(getattr(settings, 'APPS_DIR', base_dir / "apps"))
+    
+    frontend_app_fallback = base_dir / "frontend" / "apps" 
+    frontend_apps_path = Path(getattr(settings, 'FRONTEND_APPS_DIR', frontend_app_fallback))
+    
+    app_source_frontend = apps_dir / payload.app / "frontend"
+    app_dest_frontend = frontend_apps_path / payload.app
+
+    if rollback:
+        if app_dest_frontend.exists():
+            shutil.rmtree(app_dest_frontend)
+        return
+
+    if not app_source_frontend.exists() or not app_source_frontend.is_dir():
+        return
+
+    if not frontend_apps_path.exists():
+        frontend_apps_path.mkdir(parents=True, exist_ok=True)
+        
+    if app_dest_frontend.exists():
+        shutil.rmtree(app_dest_frontend)
+
+    # Copy from the app's folder (source) to the central frontend workspace (destination)
+    shutil.copytree(app_source_frontend, app_dest_frontend)
+    
 
 def install_requirements(payload, installer: BaseInstaller = None, rollback: bool = False):
     if installer is None:
@@ -22,7 +58,21 @@ def install_requirements(payload, installer: BaseInstaller = None, rollback: boo
         installer.run_install()
 
 def run_migrations(payload, rollback: bool = False):
-    pass
+    """
+    Executes or reverses database migrations for the installed application.
+    
+    In a standard run, it generates new migration files (if models exist) and applies them.
+    In a rollback run, it reverts the app's migrations back to the 'zero' state.
+    
+    Args:
+        payload (InstallAppPayload): The manifest payload containing the app's metadata.
+        rollback (bool, optional): If True, triggers the rollback to revert migrations.
+    """
+    if rollback:
+        call_command('migrate', payload.app, 'zero')
+    else:
+        call_command('makemigrations', payload.app)
+        call_command('migrate', payload.app)
 
 def restart_server(payload, rollback: bool = False):
     """
@@ -78,9 +128,33 @@ def generate_app(payload, rollback: bool = False):
 
 def update_settings(payload, rollback: bool = False):
     pass
+    
 
 def run_post_install_tasks(payload, rollback: bool = False):
-    pass
+    """
+    Executes custom post-installation scripts defined by the application.
+    
+    The application must provide a Python module in `apps/<app_name>/install_scripts/<task_name>.py`
+    containing a function named `<task_name>(payload, rollback)`.
+    
+    Args:
+        payload (InstallAppPayload): The manifest payload containing the app's metadata.
+        rollback (bool, optional): If True, triggers the scripts in reverse order to undo changes.
+    """
+    if not payload.post_install_tasks:
+        return
+
+    # In a rollback scenario, tasks should be undone in LIFO order (reverse)
+    tasks_to_run = reversed(payload.post_install_tasks) if rollback else payload.post_install_tasks
+
+    for task in tasks_to_run:
+        try:
+            install_script_module = importlib.import_module(f"apps.{payload.app}.install_scripts")
+            task_func = getattr(install_script_module, task)
+            task_func(payload=payload, rollback=rollback)
+        except (ImportError, AttributeError) as e:
+            raise RuntimeError(f"Failed to load post-install task '{task}' for app '{payload.app}'. "
+                               f"Ensure apps/{payload.app}/install_scripts/{task}.py defines a function named '{task}'. Error: {str(e)}")
 
 class Appman:
     pipeline = [

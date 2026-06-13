@@ -2,11 +2,11 @@ import pytest
 import zipfile
 import io
 import requests
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 from django.conf import settings
 
-from appman.appman import Appman, generate_app, install_requirements
+from appman.appman import Appman, generate_app, install_requirements, run_post_install_tasks
 from appman.payload import InstallAppPayload
 from appman.utils import DummyInstallRequirements
 from appman.exceptions import RequirementsException
@@ -42,7 +42,6 @@ def mock_requests_get(fake_zip_bytes):
     """
     mock_response = MagicMock()
     mock_response.status_code = 200
-    # Simulate the generator behavior of iter_content yielding chunks
     mock_response.iter_content.return_value = [fake_zip_bytes]
     mock_response.raise_for_status.return_value = None
 
@@ -61,10 +60,8 @@ def test_generate_app_success(fake_apps_dir, mock_requests_get):
         path="http://fake-registry.com/test_app/download"
     )
     
-    # Execute the phase directly
     generate_app(payload)
     
-    # Verify extraction
     app_dir = fake_apps_dir / "test_app"
     assert app_dir.exists(), "The app directory was not created."
     assert (app_dir / "__init__.py").exists()
@@ -82,12 +79,9 @@ def test_generate_app_rollback(fake_apps_dir, mock_requests_get):
         path="http://fake-registry.com/test_app/download"
     )
     
-    # First install it
     generate_app(payload)
     app_dir = fake_apps_dir / "test_app"
     assert app_dir.exists()
-    
-    # Then trigger rollback
     generate_app(payload, rollback=True)
     
     
@@ -107,11 +101,8 @@ def test_install_requirements_success(fake_apps_dir):
     app_dir.mkdir()
     (app_dir / "requirements.txt").write_text("requests==2.31.0")
     
-    # Inject our mock installer
     dummy_installer = DummyInstallRequirements(payload)
     
-    # Execute phase
-    # It prints to stdout, we just ensure it doesn't raise an exception
     install_requirements(payload, installer=dummy_installer)
 
 def test_install_requirements_missing_file(fake_apps_dir):
@@ -133,3 +124,72 @@ def test_install_requirements_missing_file(fake_apps_dir):
     
     with pytest.raises(RequirementsException, match="Requirements file not found"):
         install_requirements(payload, installer=dummy_installer)
+
+def test_run_post_install_tasks_success():
+    """
+    Tests that post-install tasks are executed in the defined order.
+    """
+    payload = InstallAppPayload(
+        app="test_app",
+        path="",
+        post_install_tasks=["task_a", "task_b"]
+    )
+    
+    
+    with patch("appman.appman.importlib.import_module") as mock_import:
+        # Create a mock module that has attributes "task_a" and "task_b"
+        mock_module = MagicMock()
+        mock_func_a = MagicMock()
+        mock_func_b = MagicMock()
+        
+        setattr(mock_module, "task_a", mock_func_a)
+        setattr(mock_module, "task_b", mock_func_b)
+        mock_import.return_value = mock_module
+        
+        run_post_install_tasks(payload, rollback=False)
+        
+        assert mock_import.call_count == 2
+        mock_import.assert_called_with("apps.test_app.install_scripts")
+        
+        mock_func_a.assert_called_once_with(payload=payload, rollback=False)
+        mock_func_b.assert_called_once_with(payload=payload, rollback=False)
+
+def test_run_post_install_tasks_rollback_order():
+    """
+    Tests that post-install tasks are executed in reverse (LIFO) order during a rollback.
+    """
+    payload = InstallAppPayload(
+        app="test_app",
+        path="",
+        post_install_tasks=["task_a", "task_b"]
+    )
+    
+    with patch("appman.appman.importlib.import_module") as mock_import:
+        mock_module = MagicMock()
+        manager = MagicMock()
+        
+        setattr(mock_module, "task_a", manager.task_a)
+        setattr(mock_module, "task_b", manager.task_b)
+        mock_import.return_value = mock_module
+        
+        run_post_install_tasks(payload, rollback=True)
+        
+        expected_calls = [
+            call.task_b(payload=payload, rollback=True),
+            call.task_a(payload=payload, rollback=True)
+        ]
+        assert manager.mock_calls == expected_calls
+
+def test_run_post_install_tasks_missing_script():
+    """
+    Tests that a clear RuntimeError is raised if the script or function is missing.
+    """
+    payload = InstallAppPayload(
+        app="test_app",
+        path="",
+        post_install_tasks=["missing_task"]
+    )
+    
+    with patch("appman.appman.importlib.import_module", side_effect=ImportError("No module named 'apps.test_app.install_scripts'")):
+        with pytest.raises(RuntimeError, match="Failed to load post-install task 'missing_task' for app 'test_app'"):
+            run_post_install_tasks(payload)

@@ -14,7 +14,7 @@ def get_urls():
             urlpatterns.append(
                 url_path(path.get("url", ""), globals()[path.get("view", "")], name=path.get("name", ""))
         )
-    return urlpatterns
+    return urlpatterns + [url_path("api/", api.urls),  ]
 
 
-urlpatterns = [*get_urls(), *api.urls]
+urlpatterns = get_urls()

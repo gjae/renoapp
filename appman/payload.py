@@ -1,11 +1,15 @@
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, TypeAlias
 
 @dataclass
 class Task:
     name: str
     command: str
     
+
+TaskList: TypeAlias = List[Task]
+InstallScript: TypeAlias = list
+
 
 @dataclass
 class InstallAppPayload:
@@ -15,7 +19,9 @@ class InstallAppPayload:
     or injected as mock for testing
     """
     app: str
-    dependencies: List[str]
-    tasks: List[Task]
     path: str
+    dependencies: List[str] = field(default_factory=list)
+    tasks: TaskList = field(default_factory=list)
+    post_install_tasks: InstallScript = field(default_factory=list)
+    
     

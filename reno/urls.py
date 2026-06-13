@@ -23,9 +23,7 @@ from reno.router import api
 
 logger = logging.getLogger('django.server')
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-]
+urlpatterns = []
 
 for app in settings.APP_GRAPH.keys():
     if app == "core":
@@ -53,7 +51,7 @@ for app in settings.APP_GRAPH.keys():
             router_prefix = f"/{router_prefix}" if router_prefix else f"/{app}"
             api.add_router(router_prefix, views_module.router)
             
-        if hasattr(views_module, "controllers"):
+        if hasattr(views_module, "controllers") and len(getattr(views_module, "controllers")) > 0:
             # django-ninja-extra uses register_controllers instead of add_controller
             for controller in views_module.controllers:
                 api.register_controllers(controller)

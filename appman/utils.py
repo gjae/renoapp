@@ -66,3 +66,4 @@ class DummyInstallRequirements(BaseInstaller):
     
     def run_rollback(self):
         print(f"Rolling back requirements from {self.path}...")
+
