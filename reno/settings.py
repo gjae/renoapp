@@ -73,6 +73,7 @@ INTERNAL_APPS = [
 THIRD_PARTY_APPS = [
     'allauth',
     'allauth.account',
+    'ninja_extra',
 ]
 
 CUSTOM_APPS = [

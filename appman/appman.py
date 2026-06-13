@@ -1,3 +1,5 @@
+import os
+import subprocess
 import zipfile
 import io
 import shutil
@@ -23,7 +25,20 @@ def run_migrations(payload, rollback: bool = False):
     pass
 
 def restart_server(payload, rollback: bool = False):
-    pass
+    """
+    Triggers a graceful reload of the server.
+    In development, Django's auto-reloader handles this automatically.
+    For production, touching the wsgi.py file triggers a reload in Gunicorn/uWSGI.
+    """
+    base_dir = getattr(settings, 'BASE_DIR', Path(__file__).resolve().parent.parent)
+    wsgi_file = base_dir / "reno" / "wsgi.py"
+    
+    print("Triggering server reload...")
+    if wsgi_file.exists():
+        os.utime(wsgi_file, None)
+        print("Server reload triggered (wsgi.py touched).")
+    else:
+        print("Development environment detected. Auto-reloader will handle the restart.")
 
 def generate_app(payload, rollback: bool = False):
     """

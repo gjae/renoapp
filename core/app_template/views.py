@@ -1,6 +1,8 @@
-from django.shortcuts import render
-from django.http.response import HttpResponse
+from ninja_extra import NinjaExtraAPI
+
+api = NinjaExtraAPI()
 
 # Create your views here.
-def view_example(request):
-    return HttpResponse("{{app_name}} app is working")
+@api.get("/{{app_name}}")
+async def view_example(request):
+    return {"message": "Hello world"}

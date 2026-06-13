@@ -17,4 +17,4 @@ def get_urls():
     return urlpatterns
 
 
-urlpatterns = get_urls()
+urlpatterns = [*get_urls(), *api.urls]

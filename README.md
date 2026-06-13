@@ -88,6 +88,13 @@ graph TD
     
     Resolver -->|2. Yields Appman| ExeC
 ```
+### Centralized API Router (Django Ninja)
+RenoApp utilizes `django-ninja-extra` to provide a robust, asynchronous, and Pydantic-validated REST API. Instead of having each micro-app instantiate its own isolated API (which would fragment the OpenAPI/Swagger documentation), RenoApp features an **API Façade/Alias** in `reno.router`.
+
+Apps simply import `Router` from `reno.router` to define their endpoints. During startup, the Orchestrator's `urls.py` automatically discovers all `views.py` across installed apps and mounts their routers into a single, unified Central API exposed at `/api/docs`.
+
+### Developer Tools
+- `uv run python manage.py show_urls`: Prints a real-time, alphabetized tabular map of all URLs currently registered in the dynamic system, color-highlighting API routes for enhanced Developer Experience (DX).
 
 ### Testing
 RenoApp employs a strict testing methodology using `pytest`. The architecture is designed to allow business logic and orchestration algorithms to be tested in isolation.

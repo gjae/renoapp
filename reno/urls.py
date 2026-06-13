@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 import logging
+import importlib
+from reno.router import api
 
 logger = logging.getLogger('django.server')
 
@@ -26,8 +28,11 @@ urlpatterns = [
 ]
 
 for app in settings.APP_GRAPH.keys():
+    if app == "core":
+        continue
+    
     app_path = settings.APP_GRAPH[app]['path']
-    path_prefix = settings.APP_GRAPH[app]['app_path_prefix']
+    path_prefix = settings.APP_GRAPH[app].get('app_path_prefix', '')
     logger.warning("App path: %s", app_path)
     logger.warning("Path prefix: %s", path_prefix)
     logger.warning("Full path: %s", path_prefix + app_path)
@@ -39,3 +44,16 @@ for app in settings.APP_GRAPH.keys():
     urlpatterns.append(
         path(f"{path_prefix}", include(f"{app_path}.urls"))
     )
+
+    # Auto-discover API routers in views.py
+    try:
+        views_module = importlib.import_module(f"{app_path}.views")
+        if hasattr(views_module, 'router'):
+            router_prefix = path_prefix.strip('/')
+            router_prefix = f"/{router_prefix}" if router_prefix else f"/{app}"
+            api.add_router(router_prefix, views_module.router)
+    except ImportError:
+        pass
+
+# Expose the central API
+urlpatterns.append(path('api/', api.urls))
