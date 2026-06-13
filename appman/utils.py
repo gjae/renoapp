@@ -1,8 +1,10 @@
+import json
 import logging
 import subprocess
 from pathlib import Path
 from django.conf import settings
 from .exceptions import RequirementsException
+from .payload import InstallAppPayload
 
 class BaseInstaller:
     """
@@ -67,3 +69,31 @@ class DummyInstallRequirements(BaseInstaller):
     def run_rollback(self):
         print(f"Rolling back requirements from {self.path}...")
 
+
+class Fetcher:
+    def __init__(self, payload):
+        self.payload = payload
+        self.metadata_path = f"{self.payload.path}"
+
+
+    def get_metadata(self) -> "InstallAppPayload":
+        with open(self.metadata_path, "r") as f:
+            metadata = json.load(f)
+            return InstallAppPayload.from_dict(metadata)
+
+
+
+class DictFetcher(Fetcher):
+    def get_metadata(self) -> "InstallAppPayload":
+        return InstallAppPayload.from_dict(self.payload.to_dict())
+
+
+class UrlFetcher(Fetcher):
+    def get_metadata(self) -> "InstallAppPayload":
+        import requests
+
+        response = requests.get(self.payload.path)
+        if response.status_code != 200:
+            raise ValueError(f"Failed to fetch app metadata from {self.payload.path}")
+        metadata = response.json()
+        return InstallAppPayload.from_dict(metadata)    
