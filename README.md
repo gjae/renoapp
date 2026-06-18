@@ -86,6 +86,38 @@ The installation pipeline follows a strict sequence:
 
 **Rollback Mechanism:** `Appman` implements a Command Pattern with an automated LIFO (Last-In, First-Out) stack. If any step fails, it triggers a `rollback()` method that iterates through the stack in reverse, cleanly undoing the executed tasks (e.g., reverting migrations, deleting copied files) to ensure the system's integrity remains uncompromised.
 
+### Local Installation & Dynamic Bootstrapping
+RenoApp heavily promotes "Sideloading" and code portability. If you develop a custom plugin in another directory, you can install it seamlessly using the `local` mode:
+`python manage.py install_app -m local -p /absolute/path/to/my_projects -a my_plugin`
+
+When this command is run, two critical subsystems activate:
+
+1. **In-Memory Archiving (`LocalPathDownloader`)**: The orchestrator reads the external project directory, recursively zipping its contents directly into RAM (`io.BytesIO`). This prevents polluting the disk with temporary files while guaranteeing identical extraction logic to remote URLs.
+2. **Ephemeral Hot-Reload & Discovery (`load_app_configs`)**: 
+   - **During Installation**: After extraction, the pipeline forcibly invalidates Python's import caches (`importlib.invalidate_caches()`) and triggers `apps.populate()`. This "hack" convinces Django that the new app exists, allowing database migrations to run perfectly on the fly without rebooting the installer.
+   - **During Server Startup**: The installer exits. When the real web server (e.g., Gunicorn/Runserver) boots up, `settings.py` calls `load_app_configs()`. This function scans the `apps/` directory, finds the newly installed `__app__.json`, and cleanly mounts the app into `INSTALLED_APPS` (e.g., `apps.my_plugin`).
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant CLI as install_app (Local Mode)
+    participant Mem as RAM (BytesIO)
+    participant Apps as apps/ Directory
+    participant Django as settings.py (Server)
+
+    Dev->>CLI: Run local installation
+    CLI->>Mem: Zip external folder recursively
+    Mem-->>Apps: Extract into ecosystem
+    CLI->>CLI: Clear caches & apps.populate()
+    CLI->>CLI: Run Migrations
+    CLI-->>Dev: Installation Complete (Process dies)
+    
+    Dev->>Django: Start Web Server
+    Django->>Apps: load_app_configs() scans folders
+    Apps-->>Django: Found __app__.json (Inject apps.my_plugin)
+    Django-->>Dev: App is Live!
+```
+
 ### Dependency Resolver
 To support the `depends_on` manifest properties, RenoApp features a recursive `Resolver`. Since application dependencies form a **Directed Acyclic Graph (DAG)**, the resolver uses a Post-Order Depth-First Search (DFS) or Topological Sort to determine the exact installation order.
 

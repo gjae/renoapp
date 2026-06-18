@@ -10,6 +10,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management import call_command
 from .utils import BaseInstaller, InstallRequirements
+from django.apps import apps
 
 
 def copy_front(payload, rollback: bool = False, **kwargs):
@@ -83,7 +84,6 @@ def restart_server(payload, rollback: bool = False, **kwargs):
     base_dir = getattr(settings, 'BASE_DIR', Path(__file__).resolve().parent.parent)
     wsgi_file = base_dir / "reno" / "wsgi.py"
     
-    print("Triggering server reload...")
     if wsgi_file.exists():
         os.utime(wsgi_file, None)
         print("Server reload triggered (wsgi.py touched).")
@@ -117,8 +117,20 @@ def generate_app(payload, rollback: bool = False, downloader: "Downloader" = Non
         z.extractall(app_dir)
 
 def update_settings(payload, rollback: bool = False, **kwargs):
-    pass
+    app_path = f"apps.{payload.app}" 
+    installed_app = settings.INSTALLED_APPS
     
+    if app_path not in settings.INSTALLED_APPS:
+        installed_app.append(app_path)
+
+    # CRITICAL: Invalidate Python's import cache so it sees the newly extracted directory
+    importlib.invalidate_caches()
+    
+    apps.app_configs = {}
+    apps.apps_ready = apps.models_ready = apps.ready = False
+    apps.loading = False
+    apps.clear_cache()
+    apps.populate(installed_app)
 
 def run_post_install_tasks(payload, rollback: bool = False, **kwargs):
     """
@@ -131,6 +143,8 @@ def run_post_install_tasks(payload, rollback: bool = False, **kwargs):
         payload (InstallAppPayload): The manifest payload containing the app's metadata.
         rollback (bool, optional): If True, triggers the scripts in reverse order to undo changes.
     """
+
+    print("RUnning post install ", payload)
     if not payload.post_install_tasks:
         return
 
@@ -149,8 +163,8 @@ def run_post_install_tasks(payload, rollback: bool = False, **kwargs):
 class Appman:
     pipeline = [
         generate_app,
-        update_settings,
         install_requirements,
+        update_settings,
         copy_front,
         run_migrations,
         run_post_install_tasks,

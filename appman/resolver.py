@@ -1,3 +1,4 @@
+import json
 from .payload import InstallAppPayload
 from django.conf import settings
 from .appman import Appman
@@ -35,8 +36,18 @@ class MockAppFinder(BaseAppFinder):
             path=path
         )
 
+class LocalAppFinder(BaseAppFinder):
+    def find(self, path: str):
+        """
+        Mock implementation for testing purposes
+        """
+        with open(path, "r") as f:
+            metadata = json.load(f)
+            metadata['path'] = path
+            return InstallAppPayload.from_dict(metadata)
+
 class Resolver:
-    def __init__(self, payload: InstallAppPayload, finder: BaseAppFinder, app_mode = "url", metadatafile = "__app__.json"):
+    def __init__(self, payload: InstallAppPayload, finder: BaseAppFinder = None, app_mode = "url", metadatafile = "__app__.json"):
         self.payload = payload
         self.dependencies = set()
         self.finder = finder

@@ -107,7 +107,9 @@ class UrlFetcher(Fetcher):
 
 class LocalFetcher(Fetcher):
     def get_metadata(self) -> "InstallAppPayload":
-        pass
+        with open(self.metadata_path, "r") as f:
+            metadata = json.load(f)
+            return InstallAppPayload.from_dict(metadata)
 
 
 
@@ -147,10 +149,12 @@ class MemoryDownloader(Downloader):
 
 class LocalPathDownloader(Downloader):
     def is_valid_path(self, path):
-        path = Path(path)
+        path = Path(self.payload.path) / self.payload.app / self.metadata_path
         if not path.exists():
             raise FileNotFoundError(f"Path {path} does not exist")
-        return path
+
+        return Path(self.payload.path) / self.payload.app
+
 
     def raise_for_status(self):
         pass

@@ -42,6 +42,7 @@ def load_app_configs():
         if app.is_dir() and (app / '__app__.json').exists():
             with open(app / '__app__.json') as f:
                 config = json.load(f)
+                config['path'] = f"apps.{app.name}"
                 app_configs.append(config['path'])
                 APP_GRAPH[config['name']] = config
     return app_configs
