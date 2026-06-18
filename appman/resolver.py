@@ -36,11 +36,13 @@ class MockAppFinder(BaseAppFinder):
         )
 
 class Resolver:
-    def __init__(self, payload: InstallAppPayload, finder: BaseAppFinder):
+    def __init__(self, payload: InstallAppPayload, finder: BaseAppFinder, app_mode = "url", metadatafile = "__app__.json"):
         self.payload = payload
         self.dependencies = set()
         self.finder = finder
         self.install_dependency_stack = []
+        self.app_mode = app_mode
+        self.metadatafile = metadatafile
 
     def check_dependencies(self):
         """
@@ -64,7 +66,6 @@ class Resolver:
         if visited_path is None:
             visited_path = set()
             
-        # Detect circular dependencies (DAG enforcement)
         if self.payload.app in visited_path:
             path_str = " -> ".join(list(visited_path) + [self.payload.app])
             raise ValueError(f"Circular dependency detected: {path_str}")
@@ -77,7 +78,7 @@ class Resolver:
             if not dep_payload:
                 raise ValueError(f"Dependency '{dep}' could not be found by the AppFinder.")
                 
-            sub_resolver = Resolver(dep_payload, self.finder)
+            sub_resolver = Resolver(dep_payload, self.finder, self.app_mode, self.metadatafile)
             
             # Pass visited_path by copy to prevent conflicts across parallel branches
             sub_stack = sub_resolver.resolve(visited_path=visited_path.copy())
@@ -104,9 +105,21 @@ class Resolver:
             
         return self.install_dependency_stack
 
+    def get_downloader_mode(self):
+        from appman.utils import LocalPathDownloader, UrlDownloader, MemoryDownloader
+
+        if self.app_mode == "local":
+            return LocalPathDownloader(self.payload, self.metadatafile)
+        elif self.app_mode == "url":
+            return UrlDownloader(self.payload, self.metadatafile)
+        elif self.app_mode == "memory":
+            return MemoryDownloader(self.payload, self.metadatafile)
+        else:
+            raise ValueError("Invalid mode")
+
     def walk(self):
         """
         Executes all tasks in the resolved order.
         """
         for payload in self.install_dependency_stack:
-            yield Appman(payload)
+            yield Appman(payload, self.get_downloader_mode())

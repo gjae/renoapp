@@ -2,6 +2,7 @@ import pytest
 import zipfile
 import io
 import requests
+from appman.utils import MemoryDownloader
 from unittest.mock import patch, MagicMock, call
 from pathlib import Path
 from django.conf import settings
@@ -60,7 +61,12 @@ def test_generate_app_success(fake_apps_dir, mock_requests_get):
         path="http://fake-registry.com/test_app/download"
     )
     
-    generate_app(payload)
+    
+    # Wrap the fake zip bytes
+    payload.path = io.BytesIO(mock_requests_get.return_value.iter_content.return_value[0])
+    dummy_downloader = MemoryDownloader(payload)
+    
+    generate_app(payload, downloader=dummy_downloader)
     
     app_dir = fake_apps_dir / "test_app"
     assert app_dir.exists(), "The app directory was not created."
@@ -79,10 +85,15 @@ def test_generate_app_rollback(fake_apps_dir, mock_requests_get):
         path="http://fake-registry.com/test_app/download"
     )
     
-    generate_app(payload)
+    from appman.utils import MemoryDownloader
+    import io
+    payload.path = io.BytesIO(mock_requests_get.return_value.iter_content.return_value[0])
+    dummy_downloader = MemoryDownloader(payload)
+    
+    generate_app(payload, downloader=dummy_downloader)
     app_dir = fake_apps_dir / "test_app"
     assert app_dir.exists()
-    generate_app(payload, rollback=True)
+    generate_app(payload, rollback=True, downloader=dummy_downloader)
     
     
 def test_install_requirements_success(fake_apps_dir):

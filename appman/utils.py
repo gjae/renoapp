@@ -1,5 +1,10 @@
+import os
+import io
 import json
+import shutil
+import zipfile
 import logging
+import tempfile
 import subprocess
 from pathlib import Path
 from django.conf import settings
@@ -71,9 +76,10 @@ class DummyInstallRequirements(BaseInstaller):
 
 
 class Fetcher:
-    def __init__(self, payload):
+    def __init__(self, payload, metadata_path: str = None):
         self.payload = payload
         self.metadata_path = f"{self.payload.path}"
+        self.metadata_path = metadata_path
 
 
     def get_metadata(self) -> "InstallAppPayload":
@@ -97,3 +103,76 @@ class UrlFetcher(Fetcher):
             raise ValueError(f"Failed to fetch app metadata from {self.payload.path}")
         metadata = response.json()
         return InstallAppPayload.from_dict(metadata)    
+
+
+class LocalFetcher(Fetcher):
+    def get_metadata(self) -> "InstallAppPayload":
+        pass
+
+
+
+class Downloader:
+    def __init__(self, payload, metadata_path: str = None):
+        self.payload = payload
+        self.metadata_path = metadata_path
+
+    def get_zip_file(self) -> str:
+        raise NotImplementedError
+
+    def raise_for_status(self):
+        raise NotImplementedError
+
+
+
+class UrlDownloader(Downloader):
+    def raise_for_status(self):
+        pass
+
+    def get_zip_file(self) -> str:
+        import requests
+        
+        response = requests.get(self.payload.path, stream=True)
+        response.raise_for_status()
+        with tempfile.TemporaryFile() as temp_file:
+            for chunk in response.iter_content(chunk_size=8192):
+                temp_file.write(chunk)
+            temp_file.seek(0)
+            return temp_file
+
+class MemoryDownloader(Downloader):
+    def get_zip_file(self) -> str:
+        return self.payload.path
+    
+
+
+class LocalPathDownloader(Downloader):
+    def is_valid_path(self, path):
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Path {path} does not exist")
+        return path
+
+    def raise_for_status(self):
+        pass
+
+    def get_zip_file(self) -> io.BytesIO:
+        path = self.is_valid_path(self.metadata_path)
+        
+        if path.is_file() and zipfile.is_zipfile(path):
+            with open(path, "rb") as f:
+                return io.BytesIO(f.read())
+                
+        elif path.is_dir():
+            memory_zip = io.BytesIO()
+            with zipfile.ZipFile(memory_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
+                for root, dirs, files in os.walk(path):
+                    for file in files:
+                        file_path = Path(root) / file
+                        arcname = file_path.relative_to(path)
+                        zipf.write(file_path, arcname)
+            
+            memory_zip.seek(0)
+            return memory_zip
+            
+        else:
+            raise ValueError(f"Path {path} is neither a valid zip file nor a directory.")

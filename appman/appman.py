@@ -12,7 +12,7 @@ from django.core.management import call_command
 from .utils import BaseInstaller, InstallRequirements
 
 
-def copy_front(payload, rollback: bool = False):
+def copy_front(payload, rollback: bool = False, **kwargs):
     """
     Extracts the frontend components from the installed app and copies them 
     to the central frontend workspace (e.g., for Vite/React compilation).
@@ -48,7 +48,7 @@ def copy_front(payload, rollback: bool = False):
     shutil.copytree(app_source_frontend, app_dest_frontend)
     
 
-def install_requirements(payload, installer: BaseInstaller = None, rollback: bool = False):
+def install_requirements(payload, installer: BaseInstaller = None, rollback: bool = False, **kwargs):
     if installer is None:
         installer = InstallRequirements(payload)
         
@@ -57,7 +57,7 @@ def install_requirements(payload, installer: BaseInstaller = None, rollback: boo
     else:
         installer.run_install()
 
-def run_migrations(payload, rollback: bool = False):
+def run_migrations(payload, rollback: bool = False, **kwargs):
     """
     Executes or reverses database migrations for the installed application.
     
@@ -74,7 +74,7 @@ def run_migrations(payload, rollback: bool = False):
         call_command('makemigrations', payload.app)
         call_command('migrate', payload.app)
 
-def restart_server(payload, rollback: bool = False):
+def restart_server(payload, rollback: bool = False, **kwargs):
     """
     Triggers a graceful reload of the server.
     In development, Django's auto-reloader handles this automatically.
@@ -90,7 +90,7 @@ def restart_server(payload, rollback: bool = False):
     else:
         print("Development environment detected. Auto-reloader will handle the restart.")
 
-def generate_app(payload, rollback: bool = False):
+def generate_app(payload, rollback: bool = False, downloader: "Downloader" = None, **kwargs):
     """
     Downloads and extracts a RenoApp module into the designated apps directory,
     or completely removes the directory if rolling back.
@@ -112,25 +112,15 @@ def generate_app(payload, rollback: bool = False):
             shutil.rmtree(app_dir)
         return
         
-    response = requests.get(payload.path, stream=True)
-    response.raise_for_status()
-    
-    with tempfile.TemporaryFile() as temp_file:
-        for chunk in response.iter_content(chunk_size=8192):
-            if chunk:
-                temp_file.write(chunk)
-                
-        # Rewind the file pointer to the beginning before extraction
-        temp_file.seek(0)
-        
-        with zipfile.ZipFile(temp_file) as z:
-            z.extractall(app_dir)
+    byte_string = downloader.get_zip_file()
+    with zipfile.ZipFile(byte_string) as z:
+        z.extractall(app_dir)
 
-def update_settings(payload, rollback: bool = False):
+def update_settings(payload, rollback: bool = False, **kwargs):
     pass
     
 
-def run_post_install_tasks(payload, rollback: bool = False):
+def run_post_install_tasks(payload, rollback: bool = False, **kwargs):
     """
     Executes custom post-installation scripts defined by the application.
     
@@ -171,15 +161,16 @@ class Appman:
 
     ]
 
-    def __init__(self, payload: "InstallAppPayload"):
+    def __init__(self, payload: "InstallAppPayload", downloader: "Downloader"):
         self.payload = payload
+        self.downloader = downloader
 
     def add_task(self, task):
         self.pipeline.append(task)
     
     def execute(self):
         for task in self.pipeline:
-            task(self.payload)
+            task(self.payload, downloader=self.downloader)
             self.stack.append(task)
 
     def rollback(self):

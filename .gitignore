@@ -73,3 +73,4 @@ htmlcov/
 # Test cache
 .pytest_cache/
 .cache/
+*.zip
