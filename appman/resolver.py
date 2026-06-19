@@ -41,9 +41,11 @@ class LocalAppFinder(BaseAppFinder):
         """
         Mock implementation for testing purposes
         """
+        from pathlib import Path
         with open(path, "r") as f:
             metadata = json.load(f)
-            metadata['path'] = path
+            # path is like /ruta/B/__app__.json, we need the base dir (/ruta)
+            metadata['path'] = str(Path(path).parent.parent)
             return InstallAppPayload.from_dict(metadata)
 
 class Resolver:
