@@ -180,6 +180,15 @@ Specifically, the `Resolver` module includes comprehensive tests (using a `DictA
 - **Diamond Graphs:** Validates deduplication (e.g. if A depends on B and C, and both depend on D, D is only installed once).
 - **Circular Dependencies:** Confirms that infinite loops are detected and blocked before execution.
 
+## Roadmap / TODO List
+The RenoApp orchestrator is heavily under development. The following features are planned for upcoming releases:
+
+- [ ] **Version Resolution (`[app]:[version]`)**: Implement support for specific version fetching during installation (e.g., `install_app my_plugin:1.2.0`).
+- [ ] **Frontend Compilation Integration**: Finalize the `copy_front` pipeline step to correctly integrate and build React/Vite assets dynamically.
+- [ ] **Checksum Validation**: Add security verifications (e.g., SHA-256 checksums) for remote payloads downloaded via `UrlDownloader`.
+- [ ] **WebSocket Support**: Implement real-time communication channels (Django Channels) centralized through the orchestrator.
+- [ ] **Interactive CLI Loader**: Expand the current `rich` console interface to include progress bars for dependency downloads.
+
 ## License
 This project is open-source and free to use, modify, and distribute under the **MIT License**. 
 
