@@ -2,6 +2,7 @@ import json
 from .payload import InstallAppPayload
 from django.conf import settings
 from .appman import Appman
+from pathlib import Path
 
 
 class BaseAppFinder:
@@ -41,7 +42,6 @@ class LocalAppFinder(BaseAppFinder):
         """
         Mock implementation for testing purposes
         """
-        from pathlib import Path
         with open(path, "r") as f:
             metadata = json.load(f)
             # path is like /ruta/B/__app__.json, we need the base dir (/ruta)
