@@ -14,49 +14,46 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import importlib
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from pathlib import Path
 import logging
 import importlib
 from reno.router import api
 
 logger = logging.getLogger('django.server')
 
-urlpatterns = []
+urlpatterns = [
+    path('admin/', admin.site.urls),
+]
 
-for app in settings.APP_GRAPH.keys():
-    if app == "core":
+app_path = Path(settings.BASE_DIR / "apps")
+
+for app in app_path.iterdir():
+    if not app.is_dir():
         continue
     
-    app_path = settings.APP_GRAPH[app]['path']
-    path_prefix = settings.APP_GRAPH[app].get('app_path_prefix', '')
-    logger.warning("App path: %s", app_path)
-    logger.warning("Path prefix: %s", path_prefix)
-    logger.warning("Full path: %s", path_prefix + app_path)
-    logger.warning("Full path: %s", f"{app_path}.urls")
-
-    path_prefix = path_prefix[1:] if path_prefix.startswith("/") else path_prefix
-    path_prefix = path_prefix[:-1] if path_prefix.endswith("/") else path_prefix
-    path_prefix = f"{path_prefix}/" if path_prefix else ""
-    urlpatterns.append(
-        path(f"{path_prefix}", include(f"{app_path}.urls"))
-    )
-
-    # Auto-discover API routers in views.py
-    try:
-        views_module = importlib.import_module(f"{app_path}.views")
-        if hasattr(views_module, 'router'):
-            router_prefix = path_prefix.strip('/')
-            router_prefix = f"/{router_prefix}" if router_prefix else f"/{app}"
-            api.add_router(router_prefix, views_module.router)
+    app_dir = Path(app)
+    if app_dir.is_dir() and (app_dir / "__app__.json").exists():
+        try:
+            # Inject the app prefix into the global API before importing the views
+            # This allows @api.get() inside the app to be automatically prefixed!
+            api.set_prefix(f"/{app_dir.name}")
+            views_module = importlib.import_module(f"apps.{app_dir.name}.views")
             
-        if hasattr(views_module, "controllers") and len(getattr(views_module, "controllers")) > 0:
-            # django-ninja-extra uses register_controllers instead of add_controller
-            for controller in views_module.controllers:
-                api.register_controllers(controller)
-    except ImportError:
-        pass
+            # Dynamically attach the app's router under the /api/<app_name>/ prefix
+            if hasattr(views_module, 'router'):
+                api.add_router(f"/{app_dir.name}", views_module.router)
+                
+            if hasattr(views_module, "controllers") and len(getattr(views_module, "controllers")) > 0:
+                for controller in views_module.controllers:
+                    api.register_controllers(controller)
+        except ImportError:
+            pass
 
-# Expose the central API
-urlpatterns.append(path('api/', api.urls))
+# Mount the centralized Ninja API ONCE after all routers and controllers have been added
+urlpatterns += [
+    path('api/', api.urls),
+]

@@ -12,14 +12,20 @@ class DictAppFinder(BaseAppFinder):
         super().__init__()
         self.apps_dict = apps_dict
         
-    def find(self, path: str):
-        if path in self.apps_dict:
-            deps = self.apps_dict[path]
+    def find(self, path):
+        import pathlib
+        if isinstance(path, pathlib.Path):
+            app_name = path.parent.name
+        else:
+            app_name = str(path)
+            
+        if app_name in self.apps_dict:
+            deps = self.apps_dict[app_name]
             return InstallAppPayload(
-                app=path,
+                app=app_name,
                 dependencies=deps,
                 tasks=[],
-                path=path
+                path=app_name
             )
         return None
 

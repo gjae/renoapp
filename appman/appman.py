@@ -70,10 +70,10 @@ def run_migrations(payload, rollback: bool = False, **kwargs):
         rollback (bool, optional): If True, triggers the rollback to revert migrations.
     """
     if rollback:
-        call_command('migrate', payload.app, 'zero')
+        call_command('migrate', payload.app, 'zero', verbosity=0)
     else:
-        call_command('makemigrations', payload.app)
-        call_command('migrate', payload.app)
+        call_command('makemigrations', payload.app, verbosity=0)
+        call_command('migrate', payload.app, verbosity=0)
 
 def restart_server(payload, rollback: bool = False, **kwargs):
     """
@@ -86,9 +86,6 @@ def restart_server(payload, rollback: bool = False, **kwargs):
     
     if wsgi_file.exists():
         os.utime(wsgi_file, None)
-        print("Server reload triggered (wsgi.py touched).")
-    else:
-        print("Development environment detected. Auto-reloader will handle the restart.")
 
 def generate_app(payload, rollback: bool = False, downloader: "Downloader" = None, **kwargs):
     """
@@ -118,7 +115,7 @@ def generate_app(payload, rollback: bool = False, downloader: "Downloader" = Non
 
 def update_settings(payload, rollback: bool = False, **kwargs):
     app_path = f"apps.{payload.app}" 
-    installed_app = settings.INSTALLED_APPS
+    installed_app = settings.INSTALLED_APPS.copy()
     
     if app_path not in settings.INSTALLED_APPS:
         installed_app.append(app_path)
@@ -144,7 +141,6 @@ def run_post_install_tasks(payload, rollback: bool = False, **kwargs):
         rollback (bool, optional): If True, triggers the scripts in reverse order to undo changes.
     """
 
-    print("RUnning post install ", payload)
     if not payload.post_install_tasks:
         return
 

@@ -146,7 +146,23 @@ graph TD
 ### Centralized API Router (Django Ninja)
 RenoApp utilizes `django-ninja-extra` to provide a robust, asynchronous, and Pydantic-validated REST API. Instead of having each micro-app instantiate its own isolated API (which would fragment the OpenAPI/Swagger documentation), RenoApp features an **API Façade/Alias** in `reno.router`.
 
-Apps simply import `Router` from `reno.router` to define their endpoints, or `api_controller` and `route` if they prefer Class-Based Views (CBV) for better organization. During startup, the Orchestrator's `urls.py` automatically discovers all `views.py` across installed apps. It mounts standard routers and dynamically registers any controller classes defined in a `controllers` array into a single, unified Central API exposed at `/api/docs`.
+#### The RenoAPI Smart Proxy
+To maximize Developer Experience (DX), RenoApp provides a custom `RenoAPI` class. App developers do not need to manually instantiate routers or manage prefixes. They can simply import the global `api` instance and decorate their views:
+
+```python
+# apps/my_plugin/views.py
+from reno.router import api
+
+api.set_prefix("my_plugin") # Set the isolation boundary
+
+@api.get("/")
+async def get_data(request):
+    return {"message": "Hello from my plugin"}
+```
+
+During startup, the Orchestrator's `urls.py` automatically discovers all `views.py` modules. By calling `api.set_prefix()` at the top of the module, the app gains **total routing independence**. The custom `RenoAPI` proxy intercepts the registration and automatically mounts the endpoint under `/api/my_plugin/`. 
+
+All endpoints across all apps are compiled into a single, unified Central API exposed at `/api/docs`, providing a centralized Swagger UI without any routing collisions.
 
 ### Developer Tools
 - `uv run python manage.py show_urls`: Prints a real-time, alphabetized tabular map of all URLs currently registered in the dynamic system, color-highlighting API routes for enhanced Developer Experience (DX).

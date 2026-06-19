@@ -74,6 +74,8 @@ class Resolver:
         Args:
             visited_path (set, optional): Tracks the current resolution chain to prevent circular dependencies.
         """
+        from pathlib import Path
+        
         if visited_path is None:
             visited_path = set()
             
@@ -85,7 +87,7 @@ class Resolver:
         visited_path.add(self.payload.app)
         
         for dep in self.dependencies:
-            dep_payload = self.finder.find(dep)
+            dep_payload = self.finder.find((Path(self.payload.path) / dep / self.metadatafile))
             if not dep_payload:
                 raise ValueError(f"Dependency '{dep}' could not be found by the AppFinder.")
                 
@@ -116,15 +118,20 @@ class Resolver:
             
         return self.install_dependency_stack
 
-    def get_downloader_mode(self):
+    def get_downloader_mode(self, payload):
         from appman.utils import LocalPathDownloader, UrlDownloader, MemoryDownloader
+        from pathlib import Path
 
+        path_str = str(payload.path)
+        path = payload.path if self.metadatafile not in path_str else Path("/".join(path_str.split("/")[:-2]))
+        
+        payload.path = path
         if self.app_mode == "local":
-            return LocalPathDownloader(self.payload, self.metadatafile)
+            return LocalPathDownloader(payload, self.metadatafile)
         elif self.app_mode == "url":
-            return UrlDownloader(self.payload, self.metadatafile)
+            return UrlDownloader(payload, self.metadatafile)
         elif self.app_mode == "memory":
-            return MemoryDownloader(self.payload, self.metadatafile)
+            return MemoryDownloader(payload, self.metadatafile)
         else:
             raise ValueError("Invalid mode")
 
@@ -133,4 +140,4 @@ class Resolver:
         Executes all tasks in the resolved order.
         """
         for payload in self.install_dependency_stack:
-            yield Appman(payload, self.get_downloader_mode())
+            yield Appman(payload, self.get_downloader_mode(payload))

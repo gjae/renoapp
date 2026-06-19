@@ -40,7 +40,6 @@ class InstallRequirements(BaseInstaller):
     def run_install(self):
         req_file = self.path / "requirements.txt"
         if not req_file.exists():
-            self.info("No requirements.txt found, skipping.")
             return
 
         # Using uv pip for highly concurrent and fast installations
@@ -109,6 +108,7 @@ class LocalFetcher(Fetcher):
     def get_metadata(self) -> "InstallAppPayload":
         with open(self.metadata_path, "r") as f:
             metadata = json.load(f)
+            metadata["path"] = self.payload.path
             return InstallAppPayload.from_dict(metadata)
 
 

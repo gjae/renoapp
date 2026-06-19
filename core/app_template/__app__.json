@@ -13,11 +13,5 @@
     "depends_on": [
         "core"
     ],
-    "paths": [
-        {
-            "url": "{{app_name}}",
-            "view": "view_example",
-            "name": "{{app_name}}.example"
-        }
-    ]
+    "paths": []
 }

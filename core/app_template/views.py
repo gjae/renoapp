@@ -4,8 +4,10 @@ from reno.router import api
 # only class reference
 controllers = []
 
+api.set_prefix("{{app_name}}")
+
 # Create your views here.
-@api.get("/{{app_name}}")
+@api.get("/")
 async def view_example(request):
     return {"message": "Hello world"}
 
